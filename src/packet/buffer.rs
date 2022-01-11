@@ -27,7 +27,7 @@ impl BytePacketBuffer {
     }
 
     /// Current position within buffer
-    fn pos(&self) -> usize {
+    pub fn pos(&self) -> usize {
         self.pos
     }
 
@@ -183,5 +183,59 @@ impl BytePacketBuffer {
         }
 
         Ok(outstr)
+    }
+
+    /// Writes
+
+    fn write(&mut self, val: u8) -> Result<()> {
+        if self.pos >= 512 {
+            bail!(
+                "buffer's size is {}, but write to {}.",
+                PACKET_SIZE,
+                self.pos
+            );
+        }
+        self.buf[self.pos] = val;
+        self.pos += 1;
+        Ok(())
+    }
+
+    pub fn write_u8(&mut self, val: u8) -> Result<()> {
+        self.write(val)?;
+
+        Ok(())
+    }
+
+    pub fn write_u16(&mut self, val: u16) -> Result<()> {
+        let high = ((val >> 8) & 0xff) as u8;
+        let low = (val & 0xff) as u8;
+        self.write(high)?;
+        self.write(low)?;
+        Ok(())
+    }
+
+    pub fn write_u32(&mut self, val: u32) -> Result<()> {
+        self.write(((val >> 24) & 0xff) as u8)?;
+        self.write(((val >> 16) & 0xff) as u8)?;
+        self.write(((val >> 8) & 0xff) as u8)?;
+        self.write((val & 0xff) as u8)?;
+        Ok(())
+    }
+
+    pub fn write_qname(&mut self, qname: &str) -> Result<()> {
+        for label in qname.split('.') {
+            let len = label.len();
+            if len > 0x3f {
+                bail!("label {} exceeds 63 characters of length", label);
+            }
+            self.write_u8(len as u8)?;
+            for b in label.as_bytes() {
+                self.write(*b)?;
+            }
+        }
+
+        self.write_u8(0)?;
+
+        Ok(())
     }
 }
