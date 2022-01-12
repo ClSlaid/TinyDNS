@@ -54,7 +54,7 @@ impl DnsHeader {
 
     pub fn read(&mut self, buffer: &mut BytePacketBuffer) -> Result<()> {
         let header = buffer.read_u32()?;
-        self.id = ((header >> 8) & 0xFFFF) as u16;
+        self.id = ((header >> 16) & 0xFFFF) as u16;
         let flags = (header & 0xFFFF) as u16;
 
         let a = (flags >> 8) as u8;
@@ -84,18 +84,19 @@ impl DnsHeader {
     pub fn write(&self, buffer: &mut BytePacketBuffer) -> Result<()> {
         buffer.write_u16(self.id)?;
 
-        let flags = (self.recursion_desired as u8)
+        let a = (self.recursion_desired as u8)
             | ((self.truncated_message as u8) << 1)
             | ((self.authoritative_answer as u8) << 2)
             | (self.opcode << 3)
             | ((self.response as u8) << 7);
-        let a = (self.rescode as u8)
+        let b = (self.rescode as u8)
             | ((self.checking_disabled as u8) << 4)
             | ((self.authed_data as u8) << 5)
             | ((self.z as u8) << 6)
             | ((self.recursion_available as u8) << 7);
-        buffer.write_u8(flags)?;
-        buffer.write_u8(a)?;
+        let flags = ((a as u16) << 8) | (b as u16);
+        buffer.write_u16(flags)?;
+
         buffer.write_u16(self.questions)?;
         buffer.write_u16(self.answers)?;
         buffer.write_u16(self.authoritative_entries)?;
