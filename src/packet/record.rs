@@ -43,9 +43,11 @@ pub enum DnsRecord {
 impl DnsRecord {
     pub fn read(buffer: &mut BytePacketBuffer) -> Result<DnsRecord> {
         let domain = buffer.read_qname()?;
+        dbg!(domain.clone());
 
         let qtype_num = buffer.read_u16()?;
         let qtype = QueryType::from_num(qtype_num);
+        dbg!(qtype);
 
         let _ = buffer.read_u16()?;
         let ttl = buffer.read_u32()?;
@@ -62,6 +64,23 @@ impl DnsRecord {
                 );
 
                 Ok(DnsRecord::A { domain, addr, ttl })
+            }
+            QueryType::AAAA => {
+                let mut raw_addr = [0; 8];
+                for i in 0..8 {
+                    raw_addr[i] = buffer.read_u16()?;
+                }
+                let addr = Ipv6Addr::new(
+                    raw_addr[0],
+                    raw_addr[1],
+                    raw_addr[2],
+                    raw_addr[3],
+                    raw_addr[4],
+                    raw_addr[5],
+                    raw_addr[6],
+                    raw_addr[7],
+                );
+                Ok(DnsRecord::AAAA { domain, addr, ttl })
             }
             QueryType::NS => {
                 let ns = buffer.read_qname()?;
@@ -89,23 +108,6 @@ impl DnsRecord {
                     host: mx,
                     ttl,
                 })
-            }
-            QueryType::AAAA => {
-                let mut raw_addr = [0; 8];
-                for i in 0..8 {
-                    raw_addr[i] = buffer.read_u16()?;
-                }
-                let addr = Ipv6Addr::new(
-                    raw_addr[0],
-                    raw_addr[1],
-                    raw_addr[2],
-                    raw_addr[3],
-                    raw_addr[4],
-                    raw_addr[5],
-                    raw_addr[6],
-                    raw_addr[7],
-                );
-                Ok(DnsRecord::AAAA { domain, addr, ttl })
             }
             QueryType::UNKNOWN(_) => {
                 buffer.step(data_len as usize)?;

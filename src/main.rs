@@ -9,8 +9,8 @@ fn main() -> Result<()> {
 
     loop {
         match query_handler(&socket) {
-            Ok(_) => {}
-            Err(e) => eprintln!("An error occured: {}", e),
+            Ok(_) => println!("== Handle successful! ==\n\n"),
+            Err(e) => eprintln!("== An error occured: {} ==\n\n", e),
         }
     }
 }

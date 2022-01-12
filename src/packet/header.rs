@@ -53,10 +53,9 @@ impl DnsHeader {
     }
 
     pub fn read(&mut self, buffer: &mut BytePacketBuffer) -> Result<()> {
-        let header = buffer.read_u32()?;
-        self.id = ((header >> 16) & 0xFFFF) as u16;
-        let flags = (header & 0xFFFF) as u16;
+        self.id = buffer.read_u16()?;
 
+        let flags = buffer.read_u16()?;
         let a = (flags >> 8) as u8;
         let b = (flags & 0xFF) as u8;
 
@@ -78,6 +77,12 @@ impl DnsHeader {
         self.resource_entries = buffer.read_u16()?;
 
         // Return the constant header size
+        dbg!(
+            self.questions,
+            self.answers,
+            self.authoritative_entries,
+            self.resource_entries
+        );
         Ok(())
     }
 

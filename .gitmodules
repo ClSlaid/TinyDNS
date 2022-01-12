@@ -1,0 +1,3 @@
+[submodule "dnsguide"]
+	path = dnsguide
+	url = git@github.com:ClSlaid/dnsguide.git
