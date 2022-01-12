@@ -7,8 +7,8 @@ use tiny_dns::packet::{
 use anyhow::Result;
 
 fn main() -> Result<()> {
-    let qname = "cn.bing.com";
-    let qtype = QueryType::A;
+    let qname = "blog.clslaid.icu";
+    let qtype = QueryType::CNAME;
 
     let server = ("1.1.1.1", 53);
 
