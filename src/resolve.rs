@@ -67,7 +67,7 @@ pub fn query_handler(socket: &UdpSocket) -> Result<()> {
                 packet.authorities.push(rec);
             }
 
-            println!("Got {} records in result.answers", result.resources.len());
+            println!("Got {} records in result.resources", result.resources.len());
             for rec in result.resources {
                 println!("Answer: {:?}", rec);
                 packet.resources.push(rec);
@@ -99,8 +99,8 @@ pub fn recursive_lookup(qname: &str, qtype: QueryType) -> Result<DnsPacket> {
 
     loop {
         println!(
-            "attempting lookup of {:?}{} with nameserver {}",
-            qtype, qname, ns
+            "attempting lookup on {}'s {:?} record with nameserver {}",
+            qname, qtype, ns
         );
 
         let server = (ns, 53);

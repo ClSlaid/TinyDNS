@@ -55,11 +55,9 @@ pub enum DnsRecord {
 impl DnsRecord {
     pub fn read(buffer: &mut BytePacketBuffer) -> Result<DnsRecord> {
         let domain = buffer.read_qname()?;
-        dbg!(domain.clone());
 
         let qtype_num = buffer.read_u16()?;
         let qtype = QueryType::from_num(qtype_num);
-        dbg!(qtype);
 
         let _ = buffer.read_u16()?;
         let ttl = buffer.read_u32()?;

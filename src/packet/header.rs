@@ -77,12 +77,6 @@ impl DnsHeader {
         self.resource_entries = buffer.read_u16()?;
 
         // Return the constant header size
-        dbg!(
-            self.questions,
-            self.answers,
-            self.authoritative_entries,
-            self.resource_entries
-        );
         Ok(())
     }
 
