@@ -1,16 +1,16 @@
 use anyhow::{anyhow, bail, Result};
 
-const PACKET_SIZE: usize = 1024;
+const BUFFER_SIZE: usize = 1024;
 
 pub struct BytePacketBuffer {
-    pub buf: [u8; PACKET_SIZE],
+    pub buf: [u8; BUFFER_SIZE],
     pos: usize,
 }
 
 impl Default for BytePacketBuffer {
     fn default() -> Self {
         BytePacketBuffer {
-            buf: [0; PACKET_SIZE],
+            buf: [0; BUFFER_SIZE],
             pos: 0,
         }
     }
@@ -21,7 +21,7 @@ impl BytePacketBuffer {
     /// field for keeping track of where we are.
     pub fn new() -> Self {
         BytePacketBuffer {
-            buf: [0; PACKET_SIZE],
+            buf: [0; BUFFER_SIZE],
             pos: 0,
         }
     }
@@ -45,10 +45,10 @@ impl BytePacketBuffer {
 
     /// Read a single byte and move the position one step forward
     pub fn read(&mut self) -> Result<u8> {
-        if self.pos >= PACKET_SIZE {
+        if self.pos >= BUFFER_SIZE {
             return Err(anyhow!(
                 "buffer's size is {}, but read to {}",
-                PACKET_SIZE,
+                BUFFER_SIZE,
                 self.pos
             ));
         }
@@ -60,10 +60,10 @@ impl BytePacketBuffer {
 
     /// Get a signle byte, without changing the buffer position
     pub fn get(&mut self, pos: usize) -> Result<u8> {
-        if pos >= PACKET_SIZE {
+        if pos >= BUFFER_SIZE {
             return Err(anyhow!(
                 "buffer's size is {}, but read to {}",
-                PACKET_SIZE,
+                BUFFER_SIZE,
                 pos
             ));
         }
@@ -72,10 +72,10 @@ impl BytePacketBuffer {
 
     /// Get a range of bytes
     pub fn get_range(&mut self, start: usize, len: usize) -> Result<&[u8]> {
-        if start + len >= PACKET_SIZE {
+        if start + len >= BUFFER_SIZE {
             return Err(anyhow!(
                 "buffer's size is {}, but read to {}",
-                PACKET_SIZE,
+                BUFFER_SIZE,
                 start + len
             ));
         }
@@ -188,10 +188,10 @@ impl BytePacketBuffer {
     /// Writes
 
     fn write(&mut self, val: u8) -> Result<()> {
-        if self.pos >= 512 {
+        if self.pos >= BUFFER_SIZE {
             bail!(
                 "buffer's size is {}, but write to {}.",
-                PACKET_SIZE,
+                BUFFER_SIZE,
                 self.pos
             );
         }
