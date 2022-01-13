@@ -1,3 +1,5 @@
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
 use anyhow::Result;
 pub mod buffer;
 pub mod header;
@@ -83,5 +85,66 @@ impl DnsPacket {
             rec.write(buffer)?;
         }
         Ok(())
+    }
+
+    // randomly pick up an A record in Addtional Section from upstream.
+    pub fn pick_one_server(&self) -> Option<IpAddr> {
+        self.answers
+            .iter()
+            .filter_map(|x| match x {
+                DnsRecord::A { addr, .. } => Some(IpAddr::V4(*addr)),
+                DnsRecord::AAAA { addr, .. } => Some(IpAddr::V6(*addr)),
+                _ => None,
+            })
+            .next()
+    }
+    pub fn get_random_ipv4(&self) -> Option<Ipv4Addr> {
+        self.answers
+            .iter()
+            .filter_map(|x| match x {
+                DnsRecord::A { addr, .. } => Some(*addr),
+                _ => None,
+            })
+            .next()
+    }
+    pub fn get_random_ipv6(&self) -> Option<Ipv6Addr> {
+        self.answers
+            .iter()
+            .filter_map(|x| match x {
+                DnsRecord::AAAA { addr, .. } => Some(*addr),
+                _ => None,
+            })
+            .next()
+    }
+    fn get_ns<'a>(&'a self, qname: &'a str) -> impl Iterator<Item = (&String, &String)> {
+        self.authorities
+            .iter()
+            .filter_map(|record| match record {
+                DnsRecord::NS { domain, host, .. } => Some((domain, host)),
+                _ => None,
+            })
+            // discard servers not authoritative to the query.
+            .filter(|(domain, _)| qname.ends_with(*domain))
+    }
+
+    pub fn get_resolved_ns(&self, qname: &str) -> Option<IpAddr> {
+        self.get_ns(qname)
+            .flat_map(|(_, host)| {
+                self.resources
+                    .iter()
+                    .filter_map(move |record| match record {
+                        DnsRecord::A { domain, addr, .. } if domain == host => {
+                            Some(IpAddr::V4(*addr))
+                        }
+                        DnsRecord::AAAA { domain, addr, .. } if domain == host => {
+                            Some(IpAddr::V6(*addr))
+                        }
+                        _ => None,
+                    })
+            })
+            .next()
+    }
+    pub fn get_unresolved_ns<'a>(&'a self, qname: &'a str) -> Option<&String> {
+        self.get_ns(qname).map(|(_, host)| host).next()
     }
 }

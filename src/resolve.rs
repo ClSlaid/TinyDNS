@@ -1,4 +1,4 @@
-use std::net::UdpSocket;
+use std::net::{IpAddr, UdpSocket};
 
 use crate::packet::{
     buffer::BytePacketBuffer, qtype::QueryType, question::DnsQuestion, rscode::ResultCode,
@@ -9,11 +9,9 @@ use anyhow::Result;
 use rand::random;
 
 // const FORWARD_SERVER: &str = "223.5.5.5"; // use Alibaba's public DNS to forward queries.
-const FORWARD_SERVER: &str = "8.8.8.8"; // use Google's public DNS to forward queries.
+const ROOT_SERVER: &str = "192.5.5.241"; // f.root-server.net
 
-fn lookup(qname: &str, qtype: QueryType) -> Result<DnsPacket> {
-    let server = (FORWARD_SERVER, 53);
-
+fn lookup(qname: &str, qtype: QueryType, server: (IpAddr, u16)) -> Result<DnsPacket> {
     let socket = UdpSocket::bind(("0.0.0.0", 43210))?;
 
     let mut packet = DnsPacket::new();
@@ -50,7 +48,7 @@ pub fn query_handler(socket: &UdpSocket) -> Result<()> {
     let mut is_form_error = true;
     while let Some(question) = req.questions.pop() {
         println!("Received query: {:?}", question);
-        if let Ok(result) = lookup(&question.name, question.qtype) {
+        if let Ok(result) = recursive_lookup(&question.name, question.qtype) {
             packet.questions.push(question);
             packet.header.rescode = result.header.rescode;
 
@@ -94,4 +92,44 @@ pub fn query_handler(socket: &UdpSocket) -> Result<()> {
     socket.send_to(data, src)?;
 
     Ok(())
+}
+
+pub fn recursive_lookup(qname: &str, qtype: QueryType) -> Result<DnsPacket> {
+    let mut ns = ROOT_SERVER.parse().unwrap();
+
+    loop {
+        println!(
+            "attempting lookup of {:?}{} with nameserver {}",
+            qtype, qname, ns
+        );
+
+        let server = (ns, 53);
+        let res = lookup(qname, qtype, server)?;
+
+        if !res.answers.is_empty() && res.header.rescode == ResultCode::NOERROR {
+            return Ok(res);
+        }
+
+        if res.header.rescode == ResultCode::NXDOMAIN {
+            // domain not exist
+            return Ok(res);
+        }
+        if let Some(new_ns) = res.get_resolved_ns(qname) {
+            ns = new_ns;
+            continue;
+        }
+
+        let new_ns_name = match res.get_unresolved_ns(qname) {
+            Some(x) => x,
+            None => return Ok(res),
+        };
+
+        let recursive_response = recursive_lookup(new_ns_name, QueryType::A)?;
+
+        if let Some(new_ns) = recursive_response.pick_one_server() {
+            ns = new_ns;
+        } else {
+            return Ok(res);
+        }
+    }
 }
